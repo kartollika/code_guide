@@ -1,5 +1,10 @@
 package homework01
 
+import kotlin.math.max
+
+const val MAX_N = 1_000_000
+const val MAX_ITER = 1000
+
 /**
  * DEPRECATED
  *
@@ -17,7 +22,6 @@ fun binarySearchInUnsortedArray(array: List<Int>, f: Int): Int {
 
     return map[map.keys.toList()[position]]!!
 }
-
 
 fun binarySearch(array: List<Int>, f: Int): Int {
     var l = 0
@@ -38,6 +42,7 @@ fun binarySearch(array: List<Int>, f: Int): Int {
 }
 
 fun howManyNumbers(array: List<Int>, l: Int, r: Int): Int {
+
     val arraySorted = array.sortedBy { it }
     val binLeft = binarySearch(arraySorted, l)
     val binRight = binarySearch(arraySorted, r)
