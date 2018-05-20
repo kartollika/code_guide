@@ -15,6 +15,14 @@ class Trie(private val root: Node) {
         }).isWord = true
     }
 
+    fun checkWord(word: String): Boolean =
+            word.fold(root, { curNode, c ->
+                if (!curNode.move.containsKey(c)) {
+                    return false
+                }
+                curNode.move[c]!!
+            }).isWord
+
     fun getToNode(to: String): Node? =
             to.fold(root, { curNode, c ->
                 if (!curNode.move.containsKey(c)) {
@@ -23,51 +31,101 @@ class Trie(private val root: Node) {
                 curNode.move[c]!!
             })
 
-    fun getRoot(): Node {
-        return root
-    }
+    fun getRoot(): Node = root
 }
 
-fun differentSubstrings(s: String): Int = 0
+fun differentSubstrings(s: String): Int {
+    var diffSubstrings: Int = 0
+    val stringBuilder = StringBuilder()
+    for (c: Char in s) {
+        stringBuilder.append(c)
+        diffSubstrings += zFunctionMax(stringBuilder.toString().reversed())
+    }
+    return diffSubstrings
+}
 
-fun manacker(s: String): Pair<List<Int>, List<Int>> = Pair(listOf(), listOf())
+fun zFunctionMax(s: String): Int {
+    var maxValue: Int = 0
 
+    for (i in 1 until s.length) {
+        var prefixStart = 0
+        var curI = i
 
-/**
- * Returns
- *      -1 if string doesn't exist in trie
- *      0 if any forward node has 2 move choices
- *      1 if autocomplete is available for use
- *
- */
+        while (s[curI] == s[prefixStart]) {
+            prefixStart++
+            curI++
 
-fun Trie.isAutocompleteAvailable(substring: String, string: CharSequence): Int {
-    var cur = getToNode(substring.substring(0 until substring.length)) ?: return -1
-    var index = substring.length
-
-    while (index < string.length) {
-        if (cur.move.size > 1) {
-            return 0
+            if (curI >= s.length || prefixStart >= s.length) {
+                break
+            }
         }
 
-        if (cur.move.size == 0) {
-            return -1
+        if (prefixStart == 0) {
+            continue
         }
 
-        val char = cur.move.keys.first().toChar()
-        val ch = string.substring(index, index + 1).toCharArray()[0]
-        index++
-        if (char == ch) {
-            cur = cur.move[ch]!!
-        } else {
-            return -1
+        if (prefixStart > maxValue) {
+            maxValue = prefixStart
         }
     }
+    return s.length - maxValue
+}
 
-    return when (cur.isWord) {
-        true -> 1
-        false -> -1
+fun manacker(s: String): Pair<List<Int>, List<Int>> = allPalindromes(s)
+
+fun allPalindromes(s: String): Pair<List<Int>, List<Int>> {
+    val oddPalindromes = MutableList(s.length, { 0 })
+    val evenPalindromes = MutableList(s.length, { 0 })
+
+    for (isEven in 0..1) {
+        var l: Int = 0
+        var r: Int = -1
+
+        for (i in 0 until s.length) {
+            var foundPalindromes = if (i > r) {
+                1 - isEven
+            } else {
+                if (isEven == 0) {
+                    Math.min(r - i + 1, oddPalindromes[l + r - i])
+                } else {
+                    Math.min(r - i, evenPalindromes[l + r - i - 1])
+                }
+            }
+
+            while (i + foundPalindromes + isEven < s.length && i - foundPalindromes >= 0
+                    && s[i + foundPalindromes + isEven] == s[i - foundPalindromes]) {
+                ++foundPalindromes
+            }
+            if (isEven == 0) {
+                oddPalindromes[i] = foundPalindromes
+            } else {
+                evenPalindromes[i] = foundPalindromes
+            }
+            if (i + foundPalindromes - (1 - isEven) > r) {
+                r = i + foundPalindromes - (1 - isEven)
+                l = i - foundPalindromes + 1
+            }
+        }
     }
+    return Pair(oddPalindromes, evenPalindromes)
+}
+
+fun Trie.autocomplete(word: String): Int {
+    var maxPrefix = 0
+    var iter = -1
+
+    word.fold(getRoot(), { curNode, c ->
+        iter++
+        if (!curNode.move.containsKey(c)) {
+            addWord(word)
+            return word.length
+        }
+        if (curNode.move.size > 1) {
+            maxPrefix = iter
+        }
+        curNode.move[c]!!
+    })
+    return maxPrefix + 1
 }
 
 fun autocomplete(words: List<String>): Int {
@@ -77,27 +135,8 @@ fun autocomplete(words: List<String>): Int {
         return 0
     }
 
-    wordLoop@ for (s in words.iterator()) {
-        for (i in 0 until s.length) {
-            val substring = s.substring(0..i)
-            when (trie.isAutocompleteAvailable(substring, s)) {
-                -1 -> {
-                    totalSymbolsEntered += s.length
-                    trie.addWord(s)
-                    continue@wordLoop
-                }
-                0 -> totalSymbolsEntered += 1
-                1 -> {
-                    totalSymbolsEntered += 1
-                    continue@wordLoop
-                }
-                else -> {
-                    return -1
-                }
-            }
-        }
-
+    for (word in words) {
+        totalSymbolsEntered += trie.autocomplete(word)
     }
     return totalSymbolsEntered
 }
-
